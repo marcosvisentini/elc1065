@@ -268,9 +268,9 @@ void inserir_dado(int pontuacao, int n_dados, char nome_arquivo[], char nickname
 int definir_cor_fundo(int num)
 {
     if (num > 0) {
-        return 202;
+        return 204;
     } else {
-        return 19;
+        return 27;
     }
 }
 
@@ -287,14 +287,14 @@ void resetar_cor(void)
 void imprimir_dash(int maior_num)
 {
     int n_digitos = quantidade_digitos(maior_num);
-
+    
     for (int i = 0; i < COL; i++) {
-        printf("+");
+        printf("%c[38;5;%dm+%c[0m", 27, rand() % 255, 27);
         for (int j = 0; j < n_digitos; j++) {
-            printf("-");
+            printf("%c[38;5;%dm-%c[0m", 27, rand() % 255, 27);
         }
     }
-    printf("+\n\n");
+    printf("%c[38;5;%dm+%c[0m\n", 27, rand() % 255, 27);
 }
 
 void imprimir_espacos(int n_digitos)
@@ -334,14 +334,16 @@ void imprimir_numero(int num, int maior_num)
 void imprimir_tabuleiro(int maior_num, int tab[LIN][COL])
 {
     printf("\n\n");
+    imprimir_dash(maior_num);
     for (int i = 0; i < LIN; i++) {
         for (int j = 0; j < COL; j++) {
             imprimir_numero(tab[i][j], maior_num);
         }
         imprimir_pipe();
         printf("\n");
+        imprimir_dash(maior_num);
     }
-    imprimir_dash(maior_num);
+    printf("\n");
 }
 
 void imprimir_informacoes(int num_atual, int prox_num, int pontuacao)
@@ -388,13 +390,16 @@ int fazer_numero_cair(int col, int num, int tab[LIN][COL])
     return -1;
 }
 
-bool tem_vizinho(int lin, int col, int tab[LIN][COL])
+bool tem_vizinho(int lin, int *col, int tab[LIN][COL])
 {
-    if (lin < (LIN - 1) && tab[lin + 1][col] == tab[lin][col]) {
+    int col_temp = *col;
+
+    if (lin < (LIN - 1) && tab[lin + 1][col_temp] == tab[lin][col_temp]) {
         return true;
     }
 
-    if (col < (COL - 1) && tab[lin][col + 1] == tab[lin][col]) {
+    if (col_temp < (COL - 1) && tab[lin][col_temp + 1] == tab[lin][col_temp]) {
+        *col = col_temp + 1;
         return true;
     }
 
@@ -441,9 +446,10 @@ bool tem_regiao_para_trocar(int *lin, int *col, int tab[LIN][COL])
             if (tab[i][j] == 0) {
                 continue;
             }
-            if (tem_vizinho(i, j, tab)) {
+            int col_temp = j;
+            if (tem_vizinho(i, &col_temp, tab)) {
                 *lin = i;
-                *col = j;
+                *col = col_temp;
                 return true;
             }
         }
@@ -468,21 +474,21 @@ int trocar_regiao_por_x(int lin, int col, int num, int x, int tab[LIN][COL])
     return n_trocados;
 }
 
-int jogar(int col, int *maior_num, int tab[LIN][COL])
+int jogar(int *maior_num, int tab[LIN][COL])
 {
     int lin_temp, col_temp;
     int pontuacao = 0;
     limpar_stream();
-
+    
     while (tem_regiao_para_trocar(&lin_temp, &col_temp, tab)) {
         imprimir_tabuleiro(*maior_num, tab);
         esperar_enter();
-
+        
         int num = tab[lin_temp][col_temp];
         int n_trocados = trocar_regiao_por_x(lin_temp, col_temp, num, 0, tab) - 1;
         int novo_num = num * pow(2, n_trocados);
-
-        tab[lin_temp][col] = novo_num;
+        
+        tab[lin_temp][col_temp] = novo_num;
         pontuacao += novo_num;
 
         if (novo_num > *maior_num) {
@@ -667,7 +673,7 @@ int partida(int maior_num, int tab[LIN][COL])
             break;
         }
 
-        pontuacao += jogar(col, &maior_num, tab);
+        pontuacao += jogar(&maior_num, tab);
         gravar_partida(pontuacao, maior_num, num_atual, prox_num, tab);
         num_atual = prox_num;
         prox_num = gerar_numero(maior_num);
